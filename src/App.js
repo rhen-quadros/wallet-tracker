@@ -19,6 +19,7 @@ function App() {
   const [solPrice, setSolPrice] = useState(0);
   const [tokenList, setTokenList] = useState({});
   const { toast } = useToast();
+  const [tokenListLoading, setTokenListLoading] = useState(true);
 
   const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=183200ba-7981-4a8c-87e7-f742f66c2dbf');
 
@@ -153,20 +154,24 @@ function App() {
         .map(account => {
           const parsedInfo = account.account.data.parsed.info;
           const mintAddress = parsedInfo.mint;
-          console.log('Processing token mint:', mintAddress);
-          console.log('Token info:', parsedInfo);
-          const amount = parsedInfo.tokenAmount.uiAmount;
+          const tokenInfo = tokenList[mintAddress];
+          
+          console.log('Processing token:', {
+            mint: mintAddress,
+            tokenInfo: tokenInfo,
+            listSize: Object.keys(tokenList).length
+          });
 
+          const amount = parsedInfo.tokenAmount.uiAmount;
           const price = pricesData?.data?.[mintAddress]?.price || 0;
           const usdValue = amount * price;
-          const tokenInfo = tokenList[mintAddress] || { symbol: 'Unknown', name: 'Unknown Token' };
 
           return {
-            symbol: tokenInfo.symbol,
-            name: tokenInfo.name,
+            symbol: tokenInfo?.symbol || 'Unknown',
+            name: tokenInfo?.name || 'Unknown Token',
             amount: amount,
             mint: mintAddress,
-            decimals: tokenInfo.decimals || 9,
+            decimals: tokenInfo?.decimals || 9,
             usdValue: usdValue,
             price: price
           };
@@ -263,10 +268,9 @@ function App() {
   useEffect(() => {
     const fetchTokenList = async () => {
       try {
-        // Using Jupiter's full token list
+        setTokenListLoading(true);
         const response = await fetch('https://token.jup.ag/all');
         const data = await response.json();
-        console.log('Fetched full token list:', data);
         
         // Create a map of mint addresses to token info
         const tokenMap = {};
@@ -277,15 +281,41 @@ function App() {
             decimals: token.decimals
           };
         });
-        console.log('Token map created:', tokenMap);
+        
+        console.log('Token map size:', Object.keys(tokenMap).length);
         setTokenList(tokenMap);
       } catch (error) {
         console.error('Error fetching token list:', error);
+      } finally {
+        setTokenListLoading(false);
       }
     };
 
     fetchTokenList();
   }, []);
+
+  // Add this after your other useEffects
+  useEffect(() => {
+    const fetchSavedWalletData = async () => {
+      if (addresses.length > 0) {
+        setLoading(true);
+        try {
+          const data = {};
+          for (const address of addresses) {
+            const walletInfo = await fetchWalletData(address);
+            data[address] = walletInfo;
+          }
+          setWalletData(data);
+        } catch (error) {
+          console.error('Error fetching saved wallet data:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchSavedWalletData();
+  }, [addresses]);
 
   return (
     <>
