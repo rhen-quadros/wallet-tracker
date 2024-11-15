@@ -5,8 +5,9 @@ import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { useToast } from './contexts/ToastContext';
-import { X } from 'lucide-react';
+import { X, RefreshCw, Trash2, Plus, TrendingUp, Wallet } from 'lucide-react';
 import { Toaster } from "./components/ui/toaster";
+import { motion, AnimatePresence } from "framer-motion";
 
 function App() {
   const [addressInputs, setAddressInputs] = useState(['']);
@@ -342,15 +343,32 @@ function App() {
     }
   };
 
+  // Add loading skeleton component
+  const SkeletonRow = () => (
+    <tr className="animate-pulse">
+      <td className="table-cell"><div className="h-4 bg-dark-accent/20 rounded w-24"></div></td>
+      <td className="table-cell"><div className="h-4 bg-dark-accent/20 rounded w-32"></div></td>
+      <td className="table-cell"><div className="h-4 bg-dark-accent/20 rounded w-24"></div></td>
+      <td className="table-cell"><div className="h-4 bg-dark-accent/20 rounded w-40"></div></td>
+      <td className="table-cell"><div className="h-4 bg-dark-accent/20 rounded w-24"></div></td>
+      <td className="table-cell"><div className="h-4 bg-dark-accent/20 rounded w-8"></div></td>
+    </tr>
+  );
+
   return (
     <>
       <div className="min-h-screen bg-dark-background p-4 sm:p-6 lg:p-8">
         <div className="max-w-6xl mx-auto animate-fade-in">
           <Card className="wallet-card">
             <CardHeader className="border-b border-dark-border">
-              <div className="flex justify-between items-center">
+              <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-between items-center"
+              >
                 <div className="flex items-center space-x-4">
-                  <CardTitle className="text-xl font-bold text-dark-text-primary">
+                  <CardTitle className="text-xl font-bold text-dark-text-primary flex items-center">
+                    <Wallet className="mr-2 h-5 w-5" />
                     Wallet Tracker
                   </CardTitle>
                   <Button
@@ -358,28 +376,35 @@ function App() {
                     size="sm"
                     onClick={handleRefresh}
                     disabled={loading}
-                    className="bg-dark-accent hover:bg-dark-accent/90"
+                    className="bg-dark-accent hover:bg-dark-accent/90 flex items-center"
                   >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                     {loading ? 'Refreshing...' : 'Refresh'}
                   </Button>
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={handleClearAll}
-                    className="bg-dark-accent hover:bg-dark-accent/90"
+                    className="bg-dark-accent hover:bg-dark-accent/90 flex items-center"
                   >
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Clear All
                   </Button>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-dark-text-primary">
+                <motion.div 
+                  className="text-right"
+                  animate={{ scale: [1, 1.02, 1] }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="text-2xl font-bold text-dark-text-primary flex items-center justify-end">
+                    <TrendingUp className="mr-2 h-5 w-5" />
                     {formatUSD(calculateTotalPortfolioValue())}
                   </div>
                   <div className="text-sm text-dark-text-secondary">
                     Total Portfolio Value
                   </div>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </CardHeader>
 
             <CardContent className="space-y-6">
@@ -437,44 +462,66 @@ function App() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-dark-border">
-                    {addresses.map((address) => (
-                      <tr key={address} className="hover:bg-dark-card/50">
-                        <td className="table-cell font-mono">{formatAddress(address)}</td>
-                        <td className="table-cell">
-                          {loading ? "Loading..." : (
-                            <div className="space-y-1">
-                              {formatSolBalance(walletData[address]?.solBalance || 0)} SOL
-                              {walletData[address]?.stakedBalance > 0 && (
-                                <div className="text-sm text-dark-text-secondary">
-                                  + {formatSolBalance(walletData[address]?.stakedBalance)} Staked SOL
+                    <AnimatePresence>
+                      {loading ? (
+                        Array(addresses.length || 1).fill(0).map((_, i) => (
+                          <SkeletonRow key={`skeleton-${i}`} />
+                        ))
+                      ) : (
+                        addresses.map((address) => (
+                          <motion.tr
+                            key={address}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="hover:bg-dark-card/50 transition-colors"
+                          >
+                            <td className="table-cell font-mono">{formatAddress(address)}</td>
+                            <td className="table-cell">
+                              {loading ? "Loading..." : (
+                                <div className="space-y-1">
+                                  {formatSolBalance(walletData[address]?.solBalance || 0)} SOL
+                                  {walletData[address]?.stakedBalance > 0 && (
+                                    <div className="text-sm text-dark-text-secondary">
+                                      + {formatSolBalance(walletData[address]?.stakedBalance)} Staked SOL
+                                    </div>
+                                  )}
                                 </div>
                               )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="table-cell">{formatUSD(calculateSolInUsd(walletData[address]?.solBalance))}</td>
-                        <td className="table-cell">
-                          <div className="space-y-1">
-                            {walletData[address]?.tokens.map((token, idx) => (
-                              <div key={idx} className="flex justify-between text-sm">
-                                <span title={token.name}>{token.amount} {token.symbol}</span>
-                                <span className="text-dark-text-secondary">{formatUSD(token.usdValue)}</span>
+                            </td>
+                            <td className="table-cell">{formatUSD(calculateSolInUsd(walletData[address]?.solBalance))}</td>
+                            <td className="table-cell">
+                              <div className="space-y-1">
+                                {walletData[address]?.tokens.map((token, idx) => (
+                                  <motion.div
+                                    key={idx}
+                                    className="flex justify-between text-sm hover:bg-dark-accent/10 p-1 rounded transition-colors"
+                                    whileHover={{ scale: 1.01 }}
+                                  >
+                                    <span title={token.name} className="flex items-center">
+                                      {token.amount} {token.symbol}
+                                    </span>
+                                    <span className="text-dark-text-secondary">
+                                      {formatUSD(token.usdValue)}
+                                    </span>
+                                  </motion.div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="table-cell">{formatUSD(walletData[address]?.totalUsdValue)}</td>
-                        <td className="table-cell">
-                          <Button
-                            variant="ghost"
-                            className="text-dark-text-secondary hover:text-dark-text-primary"
-                            onClick={() => removeAddress(address)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
+                            </td>
+                            <td className="table-cell">{formatUSD(walletData[address]?.totalUsdValue)}</td>
+                            <td className="table-cell">
+                              <Button
+                                variant="ghost"
+                                className="text-dark-text-secondary hover:text-dark-text-primary"
+                                onClick={() => removeAddress(address)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </motion.tr>
+                        ))
+                      )}
+                    </AnimatePresence>
                   </tbody>
                 </table>
               </div>
