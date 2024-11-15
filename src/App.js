@@ -317,6 +317,31 @@ function App() {
     fetchSavedWalletData();
   }, [addresses]);
 
+  // Add this function to handle refresh
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      const data = {};
+      for (const address of addresses) {
+        const walletInfo = await fetchWalletData(address);
+        data[address] = walletInfo;
+      }
+      setWalletData(data);
+      toast({
+        description: "Data refreshed successfully",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        description: "Error refreshing data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="min-h-screen bg-dark-background p-4 sm:p-6 lg:p-8">
@@ -328,6 +353,15 @@ function App() {
                   <CardTitle className="text-xl font-bold text-dark-text-primary">
                     Wallet Tracker
                   </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    className="bg-dark-accent hover:bg-dark-accent/90"
+                  >
+                    {loading ? 'Refreshing...' : 'Refresh'}
+                  </Button>
                   <Button
                     variant="destructive"
                     size="sm"
