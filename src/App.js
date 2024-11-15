@@ -174,7 +174,8 @@ function App() {
             mint: mintAddress,
             decimals: tokenInfo?.decimals || 9,
             usdValue: usdValue,
-            price: price
+            price: price,
+            logoURI: tokenInfo?.logoURI
           };
         })
         .filter(token => token.usdValue > 0);
@@ -269,9 +270,10 @@ function App() {
   useEffect(() => {
     const fetchTokenList = async () => {
       try {
-        setTokenListLoading(true);
+        // Use Jupiter's full token list
         const response = await fetch('https://token.jup.ag/all');
         const data = await response.json();
+        console.log('Fetched token list:', data);
         
         // Create a map of mint addresses to token info
         const tokenMap = {};
@@ -279,11 +281,11 @@ function App() {
           tokenMap[token.address] = {
             symbol: token.symbol,
             name: token.name,
-            decimals: token.decimals
+            decimals: token.decimals,
+            logoURI: token.logoURI // Make sure we get the logo URL
           };
         });
-        
-        console.log('Token map size:', Object.keys(tokenMap).length);
+        console.log('Token map created:', tokenMap);
         setTokenList(tokenMap);
       } catch (error) {
         console.error('Error fetching token list:', error);
@@ -495,11 +497,18 @@ function App() {
                                 {walletData[address]?.tokens.map((token, idx) => (
                                   <motion.div
                                     key={idx}
-                                    className="flex justify-between text-sm hover:bg-dark-accent/10 p-1 rounded transition-colors"
+                                    className="flex justify-between text-sm hover:bg-dark-accent/10 p-1 rounded transition-colors items-center"
                                     whileHover={{ scale: 1.01 }}
                                   >
                                     <span title={token.name} className="flex items-center">
-                                      {token.amount} {token.symbol}
+                                      {token.logoURI && (
+                                        <img 
+                                          src={token.logoURI} 
+                                          alt={token.symbol}
+                                          className="w-4 h-4 rounded-full mr-2"
+                                        />
+                                      )}
+                                      {formatTokenBalance(token.amount)} {token.symbol}
                                     </span>
                                     <span className="text-dark-text-secondary">
                                       {formatUSD(token.usdValue)}
